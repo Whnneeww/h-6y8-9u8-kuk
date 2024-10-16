@@ -26,10 +26,10 @@
                 const hashedData = await hashIP(ipAddress);
                 const base64EncodedHash = base64UrlEncode(hashedData);
                 
-                document.getElementById('result').textContent = `ハッシュ化されたベース64 IPアドレス: ${base64EncodedHash}`;
+                document.getElementById('result').textContent = `取得したユーザーid: ${base64EncodedHash}`;
             } catch (error) {
                 console.error('エラーが発生しました:', error);
-                document.getElementById('result').textContent = 'IPアドレスの取得に失敗しました。';
+                document.getElementById('result').textContent = '取得に失敗しました。';
             }
         }
     </script>
