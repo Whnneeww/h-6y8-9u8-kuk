@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>暗号化プログラム</title>
+</head>
+<body>
+    <h1>暗号化プログラム</h1>
+    <textarea id="inputText" rows="10" cols="30" placeholder="ここにテキストを入力してください..."></textarea>
+    <br />
+    <input type="file" id="fileInput"/>
+    <button id="processButton">処理を実行</button>
+    <h2>結果（URL用Base64）:</h2>
+    <pre id="resultOutput"></pre>
+
+    <script>
+        function convertToHAX(input) {
+            return input.split('').map(char => char.charCodeAt(0).toString(16)).join('');
+        }
+
+        function encryptData(data) {
+            const haxString = convertToHAX(data);
+            let transformed = '';
+            let prevChar = '';
+
+            for (let i = 0; i < haxString.length; i++) {
+                if (i === 0) {
+                    transformed += haxString[i];
+                } else {
+                    const sum = parseInt(prevChar, 16) + parseInt(haxString[i], 16);
+                    transformed += (sum % 16).toString(16);
+                }
+                prevChar = haxString[i];
+            }
+
+            // 変換結果を1度だけ返す
+            const uniqueResult = Array.from(new Set(transformed)).join('');
+            
+            // Base64エンコードを追加
+            return btoa(unescape(encodeURIComponent(uniqueResult)));
+        }
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const fileContent = event.target.result;
+                const encryptedData = encryptData(fileContent);
+                document.getElementById('resultOutput').textContent = encryptedData;
+            };
+            reader.readAsText(file);
+        }
+
+        // ボタンがクリックされた時の処理
+        document.getElementById('processButton').addEventListener('click', () => {
+            const inputText = document.getElementById('inputText').value.trim();
+            const fileInput = document.getElementById('fileInput').files[0];
+
+            if (inputText) {
+                // テキストエリアの内容を処理
+                const encryptedData = encryptData(inputText);
+                document.getElementById('resultOutput').textContent = encryptedData;
+            } else if (fileInput) {
+                // ファイルを処理
+                handleFile(fileInput);
+            } else {
+                document.getElementById('resultOutput').textContent = "テキストを入力するか、ファイルを選択してください。";
+            }
+        });
+    </script>
+</body>
+</html>
