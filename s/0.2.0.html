@@ -15,16 +15,18 @@
         h1 { text-align: center; }
         input[type="file"], button { margin: 10px 0; }
         audio { display: block; margin-top: 10px; }
+        #downloadButton { display: none; } /* 初めは非表示 */
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mp3js/0.4.0/mp3.js"></script>
 </head>
 <body>
 
-<h1>i-is1 Converter and Player2</h1>
+<h1>i-is1 Converter and Player</h1>
 
 <h2>MP3/WAVを.i-is1に変換</h2>
 <input type="file" id="audioFileInput" accept=".mp3, .wav">
-<button id="convertButton">変換して保存</button>
+<button id="convertButton">変換する</button>
+<button id="downloadButton">ダウンロード</button>
 
 <h2>.i-is1ファイルを再生</h2>
 <input type="file" id="iIs1FileInput" accept=".i-is1">
@@ -32,6 +34,8 @@
 <audio id="audioPlayer" controls></audio>
 
 <script>
+let generatedBlob; // グローバルに生成したBlobを保持
+
 class CustomAudioFormat {
     constructor(sampleRate, bitDepth) {
         this.sampleRate = sampleRate || 44100; // デフォルト値
@@ -39,24 +43,14 @@ class CustomAudioFormat {
         this.audioData = new Uint8Array(); // Uint8Arrayで初期化
     }
 
-    // .i-is1ファイルを生成して保存
-    saveToFile(filename = 'audio.i-is1') {
+    // .i-is1ファイルを生成
+    generateFile() {
         const header = this.createHeader();
         const combinedData = new Uint8Array(header.length + this.audioData.length);
         combinedData.set(header);
         combinedData.set(this.audioData, header.length);
         
-        const blob = new Blob([combinedData], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        URL.revokeObjectURL(url);
+        generatedBlob = new Blob([combinedData], { type: 'application/octet-stream' });
     }
 
     // ヘッダーを生成
@@ -69,7 +63,7 @@ class CustomAudioFormat {
 
         return new Uint8Array([...version, ...sampleRateBytes, ...bitDepthBytes, ...bitRateBytes]);
     }
-    
+
     intToBytes(num) {
         return [(num >> 24) & 0xFF, (num >> 16) & 0xFF, (num >> 8) & 0xFF, num & 0xFF];
     }
@@ -93,7 +87,6 @@ class CustomAudioFormat {
         const arrayBuffer = await mp3File.arrayBuffer();
         const mp3Data = new Uint8Array(arrayBuffer);
         return new Promise((resolve) => {
-            // mp3jsを使用してデコード
             const decodedData = mp3.decode(mp3Data);
             this.audioData = new Uint8Array(decodedData);
             resolve();
@@ -104,7 +97,6 @@ class CustomAudioFormat {
     async loadIIS1File(iIs1File) {
         const arrayBuffer = await iIs1File.arrayBuffer();
         const data = new Uint8Array(arrayBuffer);
-        // ヘッダーをスキップした音声データを取得
         this.audioData = data.slice(4); // ヘッダー部分をスキップ
     }
 }
@@ -118,11 +110,27 @@ document.getElementById('convertButton').addEventListener('click', async () => {
         const audioFormat = new CustomAudioFormat();
         if (file.type === 'audio/wav') {
             await audioFormat.convertWavToIIS1(file);
-            audioFormat.saveToFile('audio.i-is1');
         } else if (file.type === 'audio/mpeg') {
             await audioFormat.convertMp3ToIIS1(file);
-            audioFormat.saveToFile('audio.i-is1'); // ここでダウンロードを実行
         }
+        
+        audioFormat.generateFile(); // .i-is1ファイルを生成
+        
+        // ダウンロードボタンを表示
+        const downloadButton = document.getElementById('downloadButton');
+        downloadButton.style.display = 'block';
+        
+        // ダウンロードボタンにクリックイベントを追加
+        downloadButton.onclick = function() {
+            const url = URL.createObjectURL(generatedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'audio.i-is1';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url); // URLの解放
+        };
     } else {
         alert('ファイルを選択してください。');
     }
