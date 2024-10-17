@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Player</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        h1 { text-align: center; }
+        input[type="file"], button { margin: 10px 0; }
+        audio { display: block; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<h1>音声ファイルの再生</h1>
+<input type="file" id="iIs1FileInput" accept=".i-is1">
+<button id="playButton">再生</button>
+<audio id="audioPlayer" controls></audio>
+
+<script>
+class AudioProcessor {
+    constructor() {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    async loadAndPlayIIS1File(iIs1File) {
+        const arrayBuffer = await this.readFileAsArrayBuffer(iIs1File);
+        const audioData = new Uint8Array(arrayBuffer);
+        this.playAudio(audioData);
+    }
+
+    readFileAsArrayBuffer(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (error) => reject(error);
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    playAudio(audioData) {
+        const audioBuffer = this.audioContext.createBuffer(1, audioData.length, this.audioContext.sampleRate);
+        audioBuffer.copyToChannel(new Float32Array(audioData), 0);
+        const source = this.audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(this.audioContext.destination);
+        source.start();
+    }
+}
+
+// 再生ボタンの処理
+document.getElementById('playButton').addEventListener('click', async () => {
+    const iIs1FileInput = document.getElementById('iIs1FileInput');
+    const file = iIs1FileInput.files[0];
+
+    if (file) {
+        const audioProcessor = new AudioProcessor();
+        await audioProcessor.loadAndPlayIIS1File(file);
+    } else {
+        alert('i-is1ファイルを選択してください。');
+    }
+});
+</script>
+
+</body>
+</html>
