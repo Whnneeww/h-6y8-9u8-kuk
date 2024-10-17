@@ -30,16 +30,19 @@
                     transformed += (sum % 16).toString(16);
                 }
             }
-            const repeatCount = parseInt(transformed.substring(0, 2), 16) || 1;
+
+            const repeatCount = parseInt(transformed.substring(0, 2), 16) || 1; // 先頭の2文字を繰り返し回数に使用
             let repeated = transformed.repeat(repeatCount);
             const mid = Math.floor(repeated.length / 2);
             const leftPart = repeated.substring(0, mid);
             const rightPart = repeated.substring(mid);
             let result = '';
+
             for (let i = 0; i < leftPart.length; i++) {
-                const product = parseInt(leftPart[i], 16) * parseInt(rightPart[i], 16);
-                result += (product % 16).toString(16);
+                const product = (parseInt(leftPart[i], 16) * parseInt(rightPart[i], 16)) % 16; // 乗算の結果を16で割った余り
+                result += product.toString(16);
             }
+
             return result;
         }
 
