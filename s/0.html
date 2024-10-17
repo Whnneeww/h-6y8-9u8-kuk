@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>i-is1 Converter and Player</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        h1 { text-align: center; }
+        input[type="file"], button { margin: 10px 0; }
+        audio { display: block; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<h1>i-is1 Converter and Player</h1>
+
+<h2>MP3/WAVを.i-is1に変換</h2>
+<input type="file" id="audioFileInput" accept=".mp3, .wav">
+<button id="convertButton">変換して保存</button>
+
+<h2>.i-is1ファイルを再生</h2>
+<input type="file" id="iIs1FileInput" accept=".i-is1">
+<button id="playButton">再生</button>
+<audio id="audioPlayer" controls></audio>
+
+<script>
+class CustomAudioFormat {
+    constructor(sampleRate, bitDepth) {
+        this.sampleRate = sampleRate || 44100; // デフォルト値
+        this.bitDepth = bitDepth || 16; // デフォルト値
+        this.audioData = [];
+    }
+
+    // 音声データを追加
+    addAudioData(data) {
+        this.audioData.push(data);
+    }
+
+    // .i-is1ファイルを生成して保存
+    saveToFile(filename = 'audio.i-is1') {
+        const header = this.createHeader();
+        const dataBlob = new Uint8Array([header, ...this.audioData].flat());
+        const blob = new Blob([dataBlob], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // ヘッダーを生成
+    createHeader() {
+        const version = [0x01]; // バージョン1
+        const sampleRateBytes = this.intToBytes(this.sampleRate);
+        const bitDepthBytes = this.intToBytes(this.bitDepth);
+        const bitRate = 64; // ビットレート
+        const bitRateBytes = this.intToBytes(bitRate);
+
+        return [...version, ...sampleRateBytes, ...bitDepthBytes, ...bitRateBytes];
+    }
+    
+    intToBytes(num) {
+        return [(num >> 24) & 0xFF, (num >> 16) & 0xFF, (num >> 8) & 0xFF, num & 0xFF];
+    }
+
+    // WAVファイルを.i-is1フォーマットに変換
+    async convertWavToIIS1(wavFile) {
+        const arrayBuffer = await wavFile.arrayBuffer();
+        const wavData = new Uint8Array(arrayBuffer);
+        this.sampleRate = 44100; 
+        this.bitDepth = 16;
+        this.audioData = this.extractAudioData(wavData);
+    }
+
+    // WAVデータから音声データを抽出する例
+    extractAudioData(wavData) {
+        return wavData.slice(44); // 44バイトのヘッダー部分をスキップ
+    }
+
+    // .i-is1ファイルを読み込んで音声データを取得
+    async loadIIS1File(iIs1File) {
+        const arrayBuffer = await iIs1File.arrayBuffer();
+        const data = new Uint8Array(arrayBuffer);
+        // ヘッダーをスキップした音声データを取得
+        this.audioData = data.slice(4); // ヘッダー部分をスキップ
+    }
+}
+
+// 変換ボタンの処理
+document.getElementById('convertButton').addEventListener('click', async () => {
+    const audioFileInput = document.getElementById('audioFileInput');
+    const file = audioFileInput.files[0];
+
+    if (file) {
+        const audioFormat = new CustomAudioFormat();
+        if (file.type === 'audio/wav') {
+            await audioFormat.convertWavToIIS1(file);
+            audioFormat.saveToFile('audio.i-is1');
+        } else if (file.type === 'audio/mpeg') {
+            // MP3ファイルの処理を追加（ここでは省略）
+            alert('MP3を現在のところサポートしていません。');
+        }
+    } else {
+        alert('ファイルを選択してください。');
+    }
+});
+
+// 再生ボタンの処理
+document.getElementById('playButton').addEventListener('click', async () => {
+    const iIs1FileInput = document.getElementById('iIs1FileInput');
+    const file = iIs1FileInput.files[0];
+
+    if (file) {
+        const audioFormat = new CustomAudioFormat();
+        await audioFormat.loadIIS1File(file);
+
+        const audioBlob = new Blob([new Uint8Array(audioFormat.audioData)], { type: 'audio/octet-stream' });
+        const url = URL.createObjectURL(audioBlob);
+        
+        const audioPlayer = document.getElementById('audioPlayer');
+        audioPlayer.src = url;
+        audioPlayer.play();
+    } else {
+        alert('i-is1ファイルを選択してください。');
+    }
+});
+</script>
+
+</body>
+</html>
