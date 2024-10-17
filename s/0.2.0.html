@@ -21,7 +21,7 @@
 </head>
 <body>
 
-<h1>i-is1 Converter and Player</h1>
+<h1>i-is1 Converter and :Player</h1>
 
 <h2>MP3/WAVを.i-is1に変換</h2>
 <input type="file" id="audioFileInput" accept=".mp3, .wav">
@@ -40,7 +40,7 @@ class CustomAudioFormat {
     constructor(sampleRate, bitDepth) {
         this.sampleRate = sampleRate || 44100; // デフォルト値
         this.bitDepth = bitDepth || 16; // デフォルト値
-        this.audioData = new Uint8Array(); // Uint8Arrayで初期化
+        this.audioData = []; // 配列で初期化
     }
 
     // .i-is1ファイルを生成
@@ -48,7 +48,7 @@ class CustomAudioFormat {
         const header = this.createHeader();
         const combinedData = new Uint8Array(header.length + this.audioData.length);
         combinedData.set(header);
-        combinedData.set(this.audioData, header.length);
+        combinedData.set(new Uint8Array(this.audioData), header.length);
         
         generatedBlob = new Blob([combinedData], { type: 'application/octet-stream' });
     }
@@ -87,8 +87,9 @@ class CustomAudioFormat {
         const arrayBuffer = await mp3File.arrayBuffer();
         const mp3Data = new Uint8Array(arrayBuffer);
         return new Promise((resolve) => {
+            // mp3jsを使ってデコード
             const decodedData = mp3.decode(mp3Data);
-            this.audioData = new Uint8Array(decodedData);
+            this.audioData = decodedData; // Uint8Array形式で格納
             resolve();
         });
     }
@@ -113,7 +114,7 @@ document.getElementById('convertButton').addEventListener('click', async () => {
         } else if (file.type === 'audio/mpeg') {
             await audioFormat.convertMp3ToIIS1(file);
         }
-        
+
         audioFormat.generateFile(); // .i-is1ファイルを生成
         
         // ダウンロードボタンを表示
