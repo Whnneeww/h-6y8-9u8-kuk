@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オシロスコープ</title>
+    <style>
+        canvas {
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="oscilloscope" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('oscilloscope');
+        const ctx = canvas.getContext('2d');
+
+        // Web Audio APIのセットアップ
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048; // FFTサイズ
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        // マイクから音声を取得
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                render();
+            })
+            .catch(err => {
+                console.error('マイクの取得に失敗しました:', err);
+            });
+
+        function drawOscilloscope(freqData, volumeData) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const maxFreq = 20000; // 最大Hz
+            const maxVolume = 255; // 音量スケール (0-255)
+
+            freqData.forEach((freq, i) => {
+                const x = (i / freqData.length) * canvas.width;
+                const brightness = Math.round((freq / maxFreq) * maxVolume);
+                const y = canvas.height - (volumeData[i] / maxVolume) * canvas.height;
+
+                ctx.fillStyle = `rgb(${brightness}, 0, ${255 - brightness})`;
+                ctx.fillRect(x, y, 2, canvas.height - y);
+            });
+        }
+
+        function render() {
+            analyser.getByteFrequencyData(dataArray);
+            const volumeData = new Uint8Array(dataArray.length).fill(255);  // 単純に音量を最大にイメージ
+            drawOscilloscope(dataArray, volumeData);
+            requestAnimationFrame(render);
+        }
+    </script>
+</body>
+</html>
