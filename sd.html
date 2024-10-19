@@ -22,6 +22,7 @@
         analyser.fftSize = 2048; // FFTサイズ
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
+        const volumeData = new Uint8Array(analyser.fftSize); // 音量データ用
 
         // マイクから音声を取得
         navigator.mediaDevices.getUserMedia({ audio: true })
@@ -40,6 +41,7 @@
             const maxFreq = 20000; // 最大Hz
             const maxVolume = 255; // 音量スケール (0-255)
 
+            // 周波数を描画
             freqData.forEach((freq, i) => {
                 const x = (i / freqData.length) * canvas.width;
                 const brightness = Math.round((freq / maxFreq) * maxVolume);
@@ -51,8 +53,11 @@
         }
 
         function render() {
+            // 音声信号のデータを取得
             analyser.getByteFrequencyData(dataArray);
-            const volumeData = new Uint8Array(dataArray.length).fill(255);  // 単純に音量を最大にイメージ
+            // 音量データを取得（時間領域データ）
+            analyser.getByteTimeDomainData(volumeData);
+
             drawOscilloscope(dataArray, volumeData);
             requestAnimationFrame(render);
         }
